@@ -3,7 +3,7 @@ import numpy as np
 import scipy.ndimage
 from torch.utils.data import Dataset
 from torchvision import transforms
-
+import time
 
 def get_train_transforms():
     rand_flip = RandFlip()
@@ -146,7 +146,11 @@ class PytTrain(Dataset):
         return len(self.images)
 
     def __getitem__(self, idx):
+        t0 = time.time()
         data = {"image": np.load(self.images[idx]), "label": np.load(self.labels[idx])}
+        t1 = time.time()
+        print("np.load [ %3d ]: %10.8f (s)     %10.8f (ms)" %(idx, t1 - t0, t0*1000))
+        self.loading_time += t1 - t0
         data = self.rand_crop(data)
         data = self.train_transforms(data)
         return data["image"], data["label"]

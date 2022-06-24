@@ -15,13 +15,13 @@ from runtime.distributed_utils import init_distributed, get_world_size, get_devi
 from runtime.distributed_utils import seed_everything, setup_seeds
 from runtime.logging import get_dllogger, mllog_start, mllog_end, mllog_event, mlperf_submission_log, mlperf_run_param_log
 from runtime.callbacks import get_callbacks
-
+import time 
 DATASET_SIZE = 168
 
 
 def main():
     mllog.config(filename=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'unet3d.log'))
-    mllog.config(filename=os.path.join("/results", 'unet3d.log'))
+    mllog.config(filename=os.path.join("./results", 'unet3d.log'))
     mllogger = mllog.get_mllogger()
     mllogger.logger.propagate = False
     mllog_start(key=constants.INIT_START)
@@ -60,11 +60,13 @@ def main():
                          include_background=flags.include_background)
     score_fn = DiceScore(to_onehot_y=True, use_argmax=True, layout=flags.layout,
                          include_background=flags.include_background)
-
+    t0 = time.time()
     if flags.exec_mode == 'train':
         train(flags, model, train_dataloader, val_dataloader, loss_fn, score_fn,
               device=device, callbacks=callbacks, is_distributed=is_distributed)
-
+    t1 = time.time()
+    if local_rank == 0:
+        print("Total training time: %10.8f [s]"%(t1 - t0))
     elif flags.exec_mode == 'evaluate':
         eval_metrics = evaluate(flags, model, val_dataloader, loss_fn, score_fn,
                                 device=device, is_distributed=is_distributed)

@@ -33,7 +33,7 @@ import tensorflow as tf
 
 def load_df_from_file(file_path, sep=",", header=0):
   """Wrapper around pandas' read_csv."""
-  with tf.gfile.Open(file_path) as infile:
+  with tf.io.gfile.GFile(file_path) as infile:
     df = pd.read_csv(infile, sep=sep, header=header)
   return df
 

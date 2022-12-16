@@ -7,9 +7,10 @@ from __future__ import print_function
 import collections
 import random
 import tokenization
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 flags = tf.flags
+
 
 FLAGS = flags.FLAGS
 

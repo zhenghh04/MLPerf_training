@@ -1,4 +1,7 @@
 import os
+from mpi4py import MPI
+comm = MPI.COMM_WORLD
+print("I am rank %d of %d" %(comm.rank, comm.size))
 from math import ceil
 from mlperf_logging import mllog
 from mlperf_logging.mllog import constants
@@ -15,7 +18,9 @@ from runtime.distributed_utils import init_distributed, get_world_size, get_devi
 from runtime.distributed_utils import seed_everything, setup_seeds
 from runtime.logging import get_dllogger, mllog_start, mllog_end, mllog_event, mlperf_submission_log, mlperf_run_param_log
 from runtime.callbacks import get_callbacks
-import time 
+import time
+from utility import perftrace
+
 DATASET_SIZE = 168
 
 
@@ -25,7 +30,7 @@ def main():
     mllogger = mllog.get_mllogger()
     mllogger.logger.propagate = False
     mllog_start(key=constants.INIT_START)
-
+    perftrace.set_logdir("./results")
     flags = PARSER.parse_args()
     dllogger = get_dllogger(flags)
     local_rank = flags.local_rank
@@ -63,7 +68,7 @@ def main():
     t0 = time.time()
     if flags.exec_mode == 'train':
         train(flags, model, train_dataloader, val_dataloader, loss_fn, score_fn,
-              device=device, callbacks=callbacks, is_distributed=is_distributed)
+              device=device, callbacks=callbacks, is_distributed=is_distributed, sleep=flags.sleep)
     t1 = time.time()
     if local_rank == 0:
         print("Total training time: %10.8f [s]"%(t1 - t0))

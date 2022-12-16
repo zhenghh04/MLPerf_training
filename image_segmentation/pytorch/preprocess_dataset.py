@@ -11,7 +11,8 @@ from torch.nn.functional import interpolate
 
 
 EXCLUDED_CASES = []#[23, 68, 125, 133, 15, 37]
-MAX_ID = 210
+MAX_ID = 300
+MIN_ID = 210
 MEAN_VAL = 101.0
 STDDEV_VAL = 76.9
 MIN_CLIP_VAL = -79.0
@@ -60,7 +61,7 @@ class Preprocessor:
         print(f"Preprocessing {self.data_dir}")
         for case in sorted([f for f in os.listdir(self.data_dir) if "case" in f]):
             case_id = int(case.split("_")[1])
-            if case_id in EXCLUDED_CASES or case_id >= MAX_ID:
+            if case_id in EXCLUDED_CASES or case_id >= MAX_ID or case_id <= MIN_ID:
                 print("Case {}. Skipped.".format(case_id))
                 continue
             image, label, image_spacings = self.load_pair(case)

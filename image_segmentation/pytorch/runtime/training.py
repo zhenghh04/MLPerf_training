@@ -76,18 +76,19 @@ def train(flags, model, train_loader, val_loader, loss_fn, score_fn, device, cal
 
         loss_value = None
         optimizer.zero_grad()
-        perftrace.event_start(name=f"loading_batch", cat="train")
+        t0 = time.time()
         for iteration, batch in enumerate(tqdm(train_loader, disable=(rank != 0) or not flags.verbose)):
             image, label = batch
-            perftrace.event_stop(name=f"loading_batch", cat="train")
+            t1 = time.time()
+            perftrace.event_complete(name=f"train:step-{iteration}", cat="train", ts = t0, dur=t1 - t0)
             image, label = image.to(device), label.to(device)
             t0 = time.time()
-            perftrace.event_start(name=f"train:step-{iteration}", cat="train")
             for callback in callbacks:
                 callback.on_batch_start()
             if (sleep >= 0):
                 emulate_compute(device, sleep)
                 t1 = time.time()
+                perftrace.event_complete(name=f"train_emulate:step-{iteration}", cat="train", ts = t0, dur = t1 - t0)
                 if (rank==0):
                     print(" training time [%d]: %10.5f" %(iteration, t1 - t0))
                 continue
@@ -114,13 +115,12 @@ def train(flags, model, train_loader, val_loader, loss_fn, score_fn, device, cal
             loss_value = reduce_tensor(loss_value, world_size).detach().cpu().numpy()
             cumulative_loss.append(loss_value)
             t1 = time.time()
-            perftrace.event_stop(name=f"train:step-{iteration}", cat="train")
-            perftrace.event_start(name=f"loading_batch", cat="train")
+            perftrace.event_complete(name=f"train:step-{iteration}", cat="train", ts = t0, dur = t1 - t0)
             if (rank==0):
                 print(" training time [%d]: %10.8f (s)     %10.8f (ms)" %(iteration, t1 - t0, t0*1000))
         mllog_end(key=CONSTANTS.EPOCH_STOP, sync=False,
                   metadata={CONSTANTS.EPOCH_NUM: epoch, 'current_lr': optimizer.param_groups[0]['lr']})
-
+            t0 = time.time()
         if flags.lr_decay_epochs:
             scheduler.step()
 

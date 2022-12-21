@@ -5,9 +5,9 @@ from tqdm import tqdm
 import torch
 import torch.nn.functional as F
 from torch.cuda.amp import autocast
-
+from utility import perftrace
 from runtime.distributed_utils import reduce_tensor, get_world_size, get_rank
-
+from time import time
 
 def evaluate(flags, model, loader, loss_fn, score_fn, device, epoch=0, is_distributed=False):
     rank = get_rank()
@@ -28,15 +28,15 @@ def evaluate(flags, model, loader, loss_fn, score_fn, device, epoch=0, is_distri
     eval_loss = []
     scores = []
     with torch.no_grad():
-        perftrace.event_start(name=f"loading_batch", cat="eval")
+        t0 = time()
         for i, batch in enumerate(tqdm(loader, disable=(rank != 0) or not flags.verbose)):
-            perftrace.event_stop(name=f"loading_batch", cat="eval")
-
+            t1 = time()
+            perftrace.event_complete(name=f"loading_batch", cat="eval", ts=t0, dur=t1 - t0)
             image, label = batch
             image, label = image.to(device), label.to(device)
             if image.numel() == 0:
                 continue
-            perftrace.event_start(name=f"evaluate:step-{i}", cat="eval")
+            t0 = time()
             with autocast(enabled=flags.amp):
                 output, label = sliding_window_inference(
                     inputs=image,
@@ -52,9 +52,9 @@ def evaluate(flags, model, loader, loss_fn, score_fn, device, epoch=0, is_distri
             eval_loss.append(eval_loss_value)
             del output
             del label
-            perftrace.event_stop(name=f"evaluate:step-{i}", cat="eval")
-            perftrace.event_start(name=f"loading_batch", cat="eval")
-
+            t1 = time()
+            print(f"evaluation time: {t1-t0} (s) \t {time()} (ms)")
+            perftrace.event_complete(name=f"evaluate:step-{i}", cat="eval", ts = t0, dur=t1-t0)
 
     scores = reduce_tensor(torch.mean(torch.stack(scores, dim=0), dim=0), world_size)
     eval_loss = reduce_tensor(torch.mean(torch.stack(eval_loss, dim=0), dim=0), world_size)

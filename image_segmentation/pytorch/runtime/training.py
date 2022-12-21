@@ -118,9 +118,10 @@ def train(flags, model, train_loader, val_loader, loss_fn, score_fn, device, cal
             perftrace.event_complete(name=f"train:step-{iteration}", cat="train", ts = t0, dur = t1 - t0)
             if (rank==0):
                 print(" training time [%d]: %10.8f (s)     %10.8f (ms)" %(iteration, t1 - t0, t0*1000))
+            t0 = time.time()
+
         mllog_end(key=CONSTANTS.EPOCH_STOP, sync=False,
                   metadata={CONSTANTS.EPOCH_NUM: epoch, 'current_lr': optimizer.param_groups[0]['lr']})
-            t0 = time.time()
         if flags.lr_decay_epochs:
             scheduler.step()
 

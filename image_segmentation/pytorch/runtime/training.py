@@ -36,7 +36,7 @@ def lr_warmup(optimizer, init_lr, lr, current_epoch, warmup_epochs):
     for param_group in optimizer.param_groups:
         param_group['lr'] = init_lr + (lr - init_lr) * scale
 
-
+@perftrace.event_logging
 def train(flags, model, train_loader, val_loader, loss_fn, score_fn, device, callbacks, is_distributed, sleep=-1):
     rank = get_rank()
     world_size = get_world_size()
@@ -80,15 +80,18 @@ def train(flags, model, train_loader, val_loader, loss_fn, score_fn, device, cal
         for iteration, batch in enumerate(tqdm(train_loader, disable=(rank != 0) or not flags.verbose)):
             image, label = batch
             t1 = time.time()
-            perftrace.event_complete(name=f"train:step-{iteration}", cat="train", ts = t0, dur=t1 - t0)
+            perftrace.event_complete(name=f"loading batch:{image.shape[0]}", cat="train", ts = t0, dur=t1 - t0)
+            t0 = time.time()
             image, label = image.to(device), label.to(device)
+            t1 = time.time()
+            perftrace.event_complete(name=f"H2D", cat="train", ts = t0, dur=t1 - t0)
             t0 = time.time()
             for callback in callbacks:
                 callback.on_batch_start()
             if (sleep >= 0):
                 emulate_compute(device, sleep)
                 t1 = time.time()
-                perftrace.event_complete(name=f"train_emulate:step-{iteration}", cat="train", ts = t0, dur = t1 - t0)
+                perftrace.event_complete(name=f"emulate_compute:step-{iteration}", cat="train", ts = t0, dur = t1 - t0)
                 if (rank==0):
                     print(" training time [%d]: %10.5f" %(iteration, t1 - t0))
                 continue
@@ -115,7 +118,7 @@ def train(flags, model, train_loader, val_loader, loss_fn, score_fn, device, cal
             loss_value = reduce_tensor(loss_value, world_size).detach().cpu().numpy()
             cumulative_loss.append(loss_value)
             t1 = time.time()
-            perftrace.event_complete(name=f"train:step-{iteration}", cat="train", ts = t0, dur = t1 - t0)
+            perftrace.event_complete(name=f"compute:step-{iteration}", cat="train", ts = t0, dur = t1 - t0)
             if (rank==0):
                 print(" training time [%d]: %10.8f (s)     %10.8f (ms)" %(iteration, t1 - t0, t0*1000))
             t0 = time.time()

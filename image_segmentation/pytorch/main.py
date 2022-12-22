@@ -23,15 +23,15 @@ from utility import perftrace
 
 DATASET_SIZE = 168
 
-
 def main():
     mllog.config(filename=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'unet3d.log'))
-    mllog.config(filename=os.path.join("./results", 'unet3d.log'))
+    flags = PARSER.parse_args()
+    os.makedirs(flags.output_dir, exist_ok=True)
+    perftrace.set_logdir(flags.output_dir)
+    mllog.config(filename=os.path.join(flags.output_dir, 'unet3d.log'))
     mllogger = mllog.get_mllogger()
     mllogger.logger.propagate = False
     mllog_start(key=constants.INIT_START)
-    perftrace.set_logdir("./results")
-    flags = PARSER.parse_args()
     dllogger = get_dllogger(flags)
     local_rank = flags.local_rank
     device = get_device(local_rank)

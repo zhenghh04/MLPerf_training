@@ -5,7 +5,6 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 import time
 import os
-from utility import perftrace
 
 
 def get_train_transforms():
@@ -151,13 +150,12 @@ class PytTrain(Dataset):
         t0 = time.time()
         data = {"image": np.load(self.images[idx]), "label": np.load(self.labels[idx])}
         t1 = time.time()
-        perftrace.event_complete(name="np.load", cat="dataloader", ts = t0, dur = t1 - t0)
         print("np.load [ %3d ] [ PID %d ] : %10.8f (s)     %10.8f (ms)" %(idx, os.getpid(), t1 - t0, t0*1000))
         t0 = time.time()
         data = self.rand_crop(data)
         data = self.train_transforms(data)
         t1 = time.time()
-        perftrace.event_complete(name="preprocess", cat="dataloader", ts = t0, dur = t1 - t0)
+        print("preprocess: %10.8f (s)  %10.8f (ms)" %(t0, t1 - t0)
         return data["image"], data["label"]
 
 

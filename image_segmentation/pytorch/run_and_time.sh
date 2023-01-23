@@ -1,14 +1,6 @@
 #!/bin/bash
 #COBALT -q gpu_a100 -t 1:00:00 -n 1
 # The following seven lines are specific to Argonne JLSE. Please comment them 
- . /etc/profile.d/modules.sh
-module use $HOME/soft/modulefiles
-module load anaconda3
-export LD_PRELOAD=$HOME/soft/darshan/lib/libdarshan.so
-export DARSHAN_DISABLE_SHARED_REDUCTION=1
-export DXT_ENABLE_IO_TRACE=4
-export DARSHAN_LOG_DIR=./darshan_log
-
 set -e
 free -h 
 # runs benchmark and reports time to convergence

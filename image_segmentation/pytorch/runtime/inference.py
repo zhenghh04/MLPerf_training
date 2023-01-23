@@ -5,11 +5,9 @@ from tqdm import tqdm
 import torch
 import torch.nn.functional as F
 from torch.cuda.amp import autocast
-from utility import perftrace
 from runtime.distributed_utils import reduce_tensor, get_world_size, get_rank
 from time import time
 
-@perftrace.event_logging
 def evaluate(flags, model, loader, loss_fn, score_fn, device, epoch=0, is_distributed=False):
     rank = get_rank()
     world_size = get_world_size()
@@ -32,7 +30,6 @@ def evaluate(flags, model, loader, loss_fn, score_fn, device, epoch=0, is_distri
         t0 = time()
         for i, batch in enumerate(tqdm(loader, disable=(rank != 0) or not flags.verbose)):
             t1 = time()
-            perftrace.event_complete(name=f"loading_batch", cat="eval", ts=t0, dur=t1 - t0)
             image, label = batch
             image, label = image.to(device), label.to(device)
             if image.numel() == 0:
@@ -55,7 +52,6 @@ def evaluate(flags, model, loader, loss_fn, score_fn, device, epoch=0, is_distri
             del label
             t1 = time()
             print(f"evaluation time: {t1-t0} (s) \t {time()} (ms)")
-            perftrace.event_complete(name=f"evaluate:step-{i}", cat="eval", ts = t0, dur=t1-t0)
             t0 = time()
 
     scores = reduce_tensor(torch.mean(torch.stack(scores, dim=0), dim=0), world_size)

@@ -2,6 +2,16 @@ import os
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
 print("I am rank %d of %d" %(comm.rank, comm.size))
+import socket
+if comm.rank == 0:
+    master_addr = socket.gethostname()
+else:
+    master_addr = None
+master_addr = MPI.COMM_WORLD.bcast(master_addr, root=0)
+os.environ["MASTER_ADDR"] = master_addr
+os.environ["MASTER_PORT"] = str(2345)
+os.environ['WORLD_SIZE'] = str(comm.size)
+os.environ['RANK'] = str(comm.rank)
 from math import ceil
 from mlperf_logging import mllog
 from mlperf_logging.mllog import constants
@@ -54,6 +64,7 @@ def main():
     mllog_end(key=constants.INIT_STOP, sync=True)
     mllog_start(key=constants.RUN_START, sync=True)
     train_dataloader, val_dataloader = get_data_loaders(flags, num_shards=world_size, global_rank=local_rank)
+    print(f"world_size: {world_size}; local_rank: {local_rank}")
     samples_per_epoch = world_size * len(train_dataloader) * flags.batch_size
     mllog_event(key='samples_per_epoch', value=samples_per_epoch, sync=False)
     flags.evaluate_every = flags.evaluate_every or ceil(20*DATASET_SIZE/samples_per_epoch)

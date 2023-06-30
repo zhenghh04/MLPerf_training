@@ -52,6 +52,7 @@ def get_data_split(path: str, num_shards: int, shard_id: int):
     mllog_event(key='train_samples', value=len(imgs_train), sync=False)
     mllog_event(key='eval_samples', value=len(imgs_val), sync=False)
     imgs_val, lbls_val = split_eval_data(imgs_val, lbls_val, num_shards, shard_id)
+#    imgs_train, lbls_train = split_eval_data(imgs_val, lbls_val, num_shards, shard_id)
     return imgs_train, imgs_val, lbls_train, lbls_val
 
 

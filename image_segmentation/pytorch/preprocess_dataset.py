@@ -11,8 +11,8 @@ from torch.nn.functional import interpolate
 
 
 EXCLUDED_CASES = []#[23, 68, 125, 133, 15, 37]
-MAX_ID = 300
-MIN_ID = 210
+MAX_ID = 209
+MIN_ID = 000
 MEAN_VAL = 101.0
 STDDEV_VAL = 76.9
 MIN_CLIP_VAL = -79.0

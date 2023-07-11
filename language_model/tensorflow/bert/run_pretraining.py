@@ -3,35 +3,21 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-import horovod.tensorflow as hvd
-hvd.init()
-print("I am rank %d of %d" %(hvd.rank(), hvd.size()))
+
 import collections
 import os
 import absl
 import modeling
 import optimization
 import mlp_logging as mllog
-import time
 from mlperf_logging.mllog import constants as mllog_constants
-import tensorflow as tf
 
 import tensorflow.compat.v1 as tf
-tf.enable_eager_execution()
-
 # from tensorflow.contrib import cluster_resolver as contrib_cluster_resolver
 # from tensorflow.contrib import data as contrib_data
 # from tensorflow.contrib import tpu as contrib_tpu
 import distribution_utils
-@tf.function
-def tfrecord_read(f):
-  tf.logging.info("HELLO: TEST: a.out")
-  return tf.data.TFRecordDataset(f)
-@tf.function
-def tfrecord_open(f):
-  tf.logging.info("HELLO: open %s" %f)
-  return f
-  
+
 flags = absl.flags
 
 FLAGS = flags.FLAGS
@@ -406,7 +392,6 @@ def input_fn_builder(input_files,
     # For eval, we want no shuffling and parallel reading doesn't matter.
     if is_training:
       d = tf.data.Dataset.from_tensor_slices(tf.constant(input_files))
-      d = d.map(tfrecord_open)
       if input_context:
         tf.logging.info(
             'Sharding the dataset: input_pipeline_id=%d num_input_pipelines=%d' % (
@@ -422,14 +407,13 @@ def input_fn_builder(input_files,
       # even more randomness to the training pipeline.
       d = d.apply(
           tf.data.experimental.parallel_interleave(
-              tfrecord_read,
+              tf.data.TFRecordDataset,
               sloppy=is_training,
               cycle_length=cycle_length))
       d = d.shuffle(buffer_size=1000)
       d = d.repeat()
     else:
-      d = tfrecord_read(input_files)
-      #d = tf.data.TFRecordDataset(input_files)
+      d = tf.data.TFRecordDataset(input_files)
       d = d.take(batch_size * num_eval_steps)
       # Since we evaluate for a fixed number of steps we don't want to encounter
       # out-of-range exceptions.
@@ -453,7 +437,7 @@ def input_fn_builder(input_files,
 def _decode_record(record, name_to_features):
   """Decodes a record to a TensorFlow example."""
   example = tf.parse_single_example(record, name_to_features)
-  tf.logging.info("DECODE ITEM")
+
   # tf.Example only supports tf.int64, but the TPU only supports tf.int32.
   # So cast all int64 to int32.
   for name in list(example.keys()):
@@ -461,7 +445,7 @@ def _decode_record(record, name_to_features):
     if t.dtype == tf.int64:
       t = tf.to_int32(t)
     example[name] = t
-  tf.logging.info("DECODE ITEM DONE")
+
   return example
 
 
@@ -586,7 +570,6 @@ def main(_):
     if FLAGS.num_gpus > 1:
       batch_size = distribution_utils.per_replica_batch_size(
             batch_size, FLAGS.num_gpus)
-      tf.logging.info("  New batch size = %d", batch_size)
     hparams = {"batch_size": batch_size}
     train_input_fn = input_fn_builder(
         input_files=input_files,

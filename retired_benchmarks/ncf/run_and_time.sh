@@ -1,8 +1,4 @@
 #!/bin/bash
-#COBALT -q gpu_a40 -n 1 -t 4:00:00
-
-module use /soft/modulefiles
-module load cuda
 set -e
 
 # runs benchmark and reports time to convergence
@@ -11,7 +7,6 @@ set -e
 
 THRESHOLD=1.0
 BASEDIR='/data/cache'
-export BASEDIR='/home/huihuo.zheng/datascience/mlperf/training/recommendation'
 DATASET=${DATASET:-ml-20m}
 
 # Get command line seed
@@ -30,18 +25,17 @@ then
     start_fmt=$(date +%Y-%m-%d\ %r)
     echo "STARTING TIMING RUN AT $start_fmt"
 
-    darshan_profile.sh mpirun -np 1 python ncf.py ${DATASET_DIR} \
+	python ncf.py ${DATASET_DIR} \
         -l 0.0002 \
         -b 65536 \
         --layers 256 256 128 64 \
         -f 64 \
-	--seed $seed \
+		--seed $seed \
         --threshold $THRESHOLD \
         --user_scaling ${USER_MUL} \
         --item_scaling ${ITEM_MUL} \
         --cpu_dataloader \
-        --random_negatives 
-
+        --random_negatives
 
 	# end timing
 	end=$(date +%s)

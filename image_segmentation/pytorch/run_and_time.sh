@@ -1,25 +1,22 @@
 #!/bin/bash
-#COBALT -q gpu_a100 -t 1:00:00 -n 1
-# The following seven lines are specific to Argonne JLSE. Please comment them 
 set -e
-free -h 
+
 # runs benchmark and reports time to convergence
 # to use the script:
 #   run_and_time.sh <random seed 1-5>
 
 SEED=${1:--1}
 
-#MAX_EPOCHS=4000
-MAX_EPOCHS=8
+MAX_EPOCHS=4000
 QUALITY_THRESHOLD="0.908"
 START_EVAL_AT=1000
 EVALUATE_EVERY=20
 LEARNING_RATE="0.8"
 LR_WARMUP_EPOCHS=200
-DATASET_DIR="./data"
+DATASET_DIR="/data"
 BATCH_SIZE=2
 GRADIENT_ACCUMULATION_STEPS=1
-NUM_WORKERS=1
+
 
 if [ -d ${DATASET_DIR} ]
 then
@@ -27,7 +24,7 @@ then
     start=$(date +%s)
     start_fmt=$(date +%Y-%m-%d\ %r)
     echo "STARTING TIMING RUN AT $start_fmt"
-    echo "Number of data loader workers: ${NUM_WORKERS}"
+
 # CLEAR YOUR CACHE HERE
   python -c "
 from mlperf_logging.mllog import constants
@@ -44,8 +41,8 @@ mllog_event(key=constants.CACHE_CLEAR, value=True)"
     --ga_steps ${GRADIENT_ACCUMULATION_STEPS} \
     --learning_rate ${LEARNING_RATE} \
     --seed ${SEED} \
-    --lr_warmup_epochs ${LR_WARMUP_EPOCHS} \
-    --num_workers ${NUM_WORKERS}
+    --lr_warmup_epochs ${LR_WARMUP_EPOCHS}
+
 	# end timing
 	end=$(date +%s)
 	end_fmt=$(date +%Y-%m-%d\ %r)

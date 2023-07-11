@@ -21,8 +21,7 @@ import utils
 from neumf import NeuMF
 
 from mlperf_compliance import mlperf_log
-import horovod.torch as hvd
-hvd.init()
+
 def parse_args():
     parser = ArgumentParser(description="Train a Nerual Collaborative"
                                         " Filtering model")
@@ -153,8 +152,7 @@ def main():
     mlperf_log.ncf_print(key=mlperf_log.INPUT_STEP_EVAL_NEG_GEN)
 
     # sync worker before timing.
-    if use_cuda:
-        torch.cuda.synchronize()
+    torch.cuda.synchronize()
 
     #===========================================================================
     #== The clock starts on loading the preprocessed data. =====================
@@ -164,25 +162,20 @@ def main():
 
     print(datetime.now(), "Loading test ratings.")
     test_ratings = [torch.LongTensor()] * args.user_scaling
-    # HZ: All the data loading happened in the very beginning
-    t_chunk = time.time()
+
     for chunk in range(args.user_scaling):
         test_ratings[chunk] = torch.from_numpy(np.load(args.data + '/testx' 
                 + str(args.user_scaling) + 'x' + str(args.item_scaling) 
                 + '_' + str(chunk) + '.npz', encoding='bytes')['arr_0'])
         
     fn_prefix = args.data + '/' + CACHE_FN.format(args.user_scaling, args.item_scaling)
-    print("HZ: Loading test rating done in %10.6f" %(time.time() - t_chunk))
     sampler_cache = fn_prefix + "cached_sampler.pkl"
     print(datetime.now(), "Loading preprocessed sampler.")
-    t_sampler = time.time()
     if os.path.exists(args.data):
       print("Using alias file: {}".format(args.data))
-      # IO happened here...
       with open(sampler_cache, "rb") as f:
-        sampler, pos_users, pos_items, nb_items, _ = pickle.load(f) ## this is the training data
+        sampler, pos_users, pos_items, nb_items, _ = pickle.load(f)
     print(datetime.now(), "Alias table loaded.")
-    print("HZ: Alias table loaded in %10.6f" %(time.time()-t_sampler))
 
     nb_users = len(sampler.num_regions)
     train_users = torch.from_numpy(pos_users).type(torch.LongTensor)
@@ -204,7 +197,6 @@ def main():
     test_neg_items = [torch.LongTensor()] * args.user_scaling
     
     print(datetime.now(), "Loading test negatives.")
-    t_neg = time.time()
     for chunk in range(args.user_scaling):
         file_name = (args.data + '/test_negx' + str(args.user_scaling) + 'x'
                 + str(args.item_scaling) + '_' + str(chunk) + '.npz')
@@ -212,7 +204,7 @@ def main():
         test_negatives[chunk] = torch.from_numpy(raw_data['arr_0'])
         print(datetime.now(), "Test negative chunk {} of {} loaded ({} users).".format(
               chunk+1, args.user_scaling, test_negatives[chunk].size()))
-    print("HZ: Test negatives loaded in %10.6f" %(time.time() - t_neg))
+
     test_neg_items = [l[:, 1] for l in test_negatives]
 
     # create items with real sample at last position
@@ -258,8 +250,7 @@ def main():
     real_indices = torch.cat(real_indices)
 
     # make pytorch memory behavior more consistent later
-    if use_cuda:
-        torch.cuda.empty_cache()
+    torch.cuda.empty_cache()
 
     mlperf_log.ncf_print(key=mlperf_log.INPUT_BATCH_SIZE, value=args.batch_size)
     mlperf_log.ncf_print(key=mlperf_log.INPUT_ORDER)  # we shuffled later with randperm

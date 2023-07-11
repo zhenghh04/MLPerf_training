@@ -70,7 +70,7 @@ def train(flags, model, train_loader, val_loader, loss_fn, score_fn, device, cal
         for iteration, batch in enumerate(tqdm(train_loader, disable=(rank != 0) or not flags.verbose)):
             image, label = batch
             image, label = image.to(device), label.to(device)
-            mllog_start(key = "compute_start", namespace="mlperf_storage", metadata={"epoch":epoch, "step": iteration}, sync=False)
+            mllog_start(key = "training_start", namespace="mlperf_storage", metadata={"epoch":epoch, "step": iteration}, sync=False)
             for callback in callbacks:
                 callback.on_batch_start()
             
@@ -95,7 +95,7 @@ def train(flags, model, train_loader, val_loader, loss_fn, score_fn, device, cal
 
             loss_value = reduce_tensor(loss_value, world_size).detach().cpu().numpy()
             cumulative_loss.append(loss_value)
-            mllog_start(key = "compute_end", namespace="mlperf_storage", metadata={"epoch":epoch, "step": iteration}, sync=False)            
+            mllog_start(key = "training_end", namespace="mlperf_storage", metadata={"epoch":epoch, "step": iteration}, sync=False)            
 
         mllog_end(key=CONSTANTS.EPOCH_STOP, sync=False,
                   metadata={CONSTANTS.EPOCH_NUM: epoch, 'current_lr': optimizer.param_groups[0]['lr']})

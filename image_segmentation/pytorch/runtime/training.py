@@ -7,6 +7,7 @@ from torch.cuda.amp import autocast, GradScaler
 from runtime.distributed_utils import get_rank, reduce_tensor, get_world_size
 from runtime.inference import evaluate
 from runtime.logging import mllog_event, mllog_start, mllog_end, CONSTANTS
+
 def get_optimizer(params, flags):
     if flags.optimizer == "adam":
         optim = Adam(params, lr=flags.learning_rate, weight_decay=flags.weight_decay)

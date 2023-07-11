@@ -3,9 +3,8 @@ import numpy as np
 import scipy.ndimage
 from torch.utils.data import Dataset
 from torchvision import transforms
-import time
 import os
-
+from runtime.logging import mllog_event, mllog_start, mllog_end, CONSTANTS
 
 def get_train_transforms():
     rand_flip = RandFlip()
@@ -147,17 +146,14 @@ class PytTrain(Dataset):
     def __len__(self):
         return len(self.images)
     def __getitem__(self, idx):
-        t0 = time.time()
+        mllog_start(key="data_loading_start", namespace="mlperf_storage", metadata={"idx":idx, "pid": os.getpid()}, sync=False)
         data = {"image": np.load(self.images[idx]), "label": np.load(self.labels[idx])}
-        t1 = time.time()
-        print("np.load [ %3d ] [ PID %d ] : %10.8f (s)     %10.8f (ms)" %(idx, os.getpid(), t1 - t0, t0*1000))
-        t0 = time.time()
+        mllog_end(key="data_loading_end", namespace="mlperf_storage", metadata={"idx":idx, "pid": os.getpid()}, sync=False)
+        mllog_start(key="preprocess_start", namespace="mlperf_storage", metadata={"idx":idx, "pid": os.getpid()}, sync=False)        
         data = self.rand_crop(data)
         data = self.train_transforms(data)
-        t1 = time.time()
-        print("preprocess: %10.8f (s)  %10.8f (ms)" %(t0, t1 - t0)
+        mllog_end(key="preprocess_end", namespace="mlperf_storage", metadata={"idx":idx, "pid": os.getpid()}, sync=False)
         return data["image"], data["label"]
-
 
 class PytVal(Dataset):
     def __init__(self, images, labels):

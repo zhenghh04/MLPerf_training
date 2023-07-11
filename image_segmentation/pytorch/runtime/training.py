@@ -7,14 +7,6 @@ from torch.cuda.amp import autocast, GradScaler
 from runtime.distributed_utils import get_rank, reduce_tensor, get_world_size
 from runtime.inference import evaluate
 from runtime.logging import mllog_event, mllog_start, mllog_end, CONSTANTS
-import time
-import numba
-def emulate_compute(device, sec):
-    if (str(device).find("GPU")!=-1):
-        print("Putting GPU into sleep for %10.5f sec"%sec)
-        numba.cuda.nanosleep(sec*1000000000)
-    else:
-        time.sleep(sec)
 def get_optimizer(params, flags):
     if flags.optimizer == "adam":
         optim = Adam(params, lr=flags.learning_rate, weight_decay=flags.weight_decay)
@@ -74,16 +66,10 @@ def train(flags, model, train_loader, val_loader, loss_fn, score_fn, device, cal
 
         loss_value = None
         optimizer.zero_grad()
-        t0 = time.time()
         for iteration, batch in enumerate(tqdm(train_loader, disable=(rank != 0) or not flags.verbose)):
             image, label = batch
-            t1 = time.time()
-            t0 = time.time()
             image, label = image.to(device), label.to(device)
-            t1 = time.time()
-            if (rank==0):
-                print("H2D time: %10.5f" %(t1 - t0))
-            t0 = time.time()
+            mllog_start(key = "compute_start", namespace="mlperf_storage", metadata={"epoch":epoch, "step": iteration}, sync=False)
             for callback in callbacks:
                 callback.on_batch_start()
             
@@ -108,10 +94,7 @@ def train(flags, model, train_loader, val_loader, loss_fn, score_fn, device, cal
 
             loss_value = reduce_tensor(loss_value, world_size).detach().cpu().numpy()
             cumulative_loss.append(loss_value)
-            t1 = time.time()
-            if (rank==0):
-                print(" training time [%d]: %10.8f (s)     %10.8f (ms)" %(iteration, t1 - t0, t0*1000))
-            t0 = time.time()
+            mllog_start(key = "compute_end", namespace="mlperf_storage", metadata={"epoch":epoch, "step": iteration}, sync=False)            
 
         mllog_end(key=CONSTANTS.EPOCH_STOP, sync=False,
                   metadata={CONSTANTS.EPOCH_NUM: epoch, 'current_lr': optimizer.param_groups[0]['lr']})

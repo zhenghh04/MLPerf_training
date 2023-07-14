@@ -93,13 +93,11 @@ def train(flags, model, train_loader, val_loader, loss_fn, score_fn, device, cal
                     optimizer.step()
 
                 optimizer.zero_grad()
-            mllog_start(key = "training_end", namespace="mlperf_storage", metadata={"epoch":epoch, "step": iteration}, sync=False)
-            t_end = time.time()
-            mllog_event(key = "training_computation_time", namespace="mlperf_storage", value = t_end - t_start, metadata={"epoch":epoch, "step": iteration}, sync=False))
             loss_value = reduce_tensor(loss_value, world_size).detach().cpu().numpy()
             cumulative_loss.append(loss_value)
-
-
+            mllog_start(key = "training_end", namespace="mlperf_storage", metadata={"epoch":epoch, "step": iteration}, sync=False)
+            t_end = time.time()
+            mllog_event(key = "training_computation_time", namespace="mlperf_storage", value = t_end - t_start, metadata={"epoch":epoch, "step": iteration}, sync=False)
         mllog_end(key=CONSTANTS.EPOCH_STOP, sync=False,
                   metadata={CONSTANTS.EPOCH_NUM: epoch, 'current_lr': optimizer.param_groups[0]['lr']})
         if flags.lr_decay_epochs:

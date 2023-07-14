@@ -5,6 +5,7 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 import os
 from runtime.logging import mllog_event, mllog_start, mllog_end, CONSTANTS
+import time
 
 def get_train_transforms():
     rand_flip = RandFlip()

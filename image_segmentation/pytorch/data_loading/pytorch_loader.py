@@ -146,13 +146,17 @@ class PytTrain(Dataset):
     def __len__(self):
         return len(self.images)
     def __getitem__(self, idx):
+        t_start = time.time()
         mllog_start(key="data_loading_start", namespace="mlperf_storage", metadata={"idx":idx, "pid": os.getpid()}, sync=False)
         data = {"image": np.load(self.images[idx]), "label": np.load(self.labels[idx])}
         mllog_end(key="data_loading_end", namespace="mlperf_storage", metadata={"idx":idx, "pid": os.getpid()}, sync=False)
+        t_end = time.time()
+        mllog_event(key = 'data_loading_time', namespace = "mlperf_storage", value = t_end - t_start, metadata={"idx":idx, "pid": os.getpid()}, sync=False)
         mllog_start(key="preprocess_start", namespace="mlperf_storage", metadata={"idx":idx, "pid": os.getpid()}, sync=False)        
         data = self.rand_crop(data)
         data = self.train_transforms(data)
         mllog_end(key="preprocess_end", namespace="mlperf_storage", metadata={"idx":idx, "pid": os.getpid()}, sync=False)
+        mllog_event(key = 'preprocess_time', namespace = "mlperf_storage", value = time.time() - t_end, metadata={"idx":idx, "pid": os.getpid()}, sync=False)
         return data["image"], data["label"]
 
 class PytVal(Dataset):

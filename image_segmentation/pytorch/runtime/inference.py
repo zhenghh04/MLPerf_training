@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from torch.cuda.amp import autocast
 from runtime.distributed_utils import reduce_tensor, get_world_size, get_rank
 from runtime.logging import mllog_event, mllog_start, mllog_end, CONSTANTS
-
+import time
 def evaluate(flags, model, loader, loss_fn, score_fn, device, epoch=0, is_distributed=False):
     rank = get_rank()
     world_size = get_world_size()
@@ -32,6 +32,7 @@ def evaluate(flags, model, loader, loss_fn, score_fn, device, epoch=0, is_distri
             image, label = image.to(device), label.to(device)
             if image.numel() == 0:
                 continue
+            t_start = time.time()
             mllog_start(key = "evaluation_start", namespace="mlperf_storage", metadata={"epoch":epoch, "step": i}, sync=False)
             with autocast(enabled=flags.amp):
                 output, label = sliding_window_inference(
@@ -48,8 +49,9 @@ def evaluate(flags, model, loader, loss_fn, score_fn, device, epoch=0, is_distri
             eval_loss.append(eval_loss_value)
             del output
             del label
+            t_end = time.time()
             mllog_end(key = "evaluation_end", namespace="mlperf_storage", metadata={"epoch":epoch, "step": i}, sync=False)                        
-
+            mllog_event(key = "evaluation_computation_time", namespace="mlperf_storage", value = t_end - t_start, metadata={"epoch":epoch, "step": i}, sync=False)
 
     scores = reduce_tensor(torch.mean(torch.stack(scores, dim=0), dim=0), world_size)
     eval_loss = reduce_tensor(torch.mean(torch.stack(eval_loss, dim=0), dim=0), world_size)

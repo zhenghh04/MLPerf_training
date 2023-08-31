@@ -21,6 +21,8 @@ PARSER.add_argument('--input_shape', nargs='+', type=int, default=[128, 128, 128
 PARSER.add_argument('--val_input_shape', nargs='+', type=int, default=[128, 128, 128])
 PARSER.add_argument('--seed', dest='seed', default=-1, type=int)
 PARSER.add_argument('--num_workers', dest='num_workers', type=int, default=8)
+PARSER.add_argument('--num_train_samples', dest='num_train_samples', type=int, default=168)
+PARSER.add_argument('--num_val_samples', dest='num_val_samples', type=int, default=42)
 PARSER.add_argument('--exec_mode', dest='exec_mode', choices=['train', 'evaluate'], default='train')
 
 PARSER.add_argument('--benchmark', dest='benchmark', action='store_true', default=False)

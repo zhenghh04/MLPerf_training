@@ -22,6 +22,22 @@ import time
 
 DATASET_SIZE = 168
 
+
+from mpi4py import MPI
+comm = MPI.COMM_WORLD
+print("I am rank %d of %d" %(comm.rank, comm.size))
+import socket
+if comm.rank == 0:
+    master_addr = socket.gethostname()
+else:
+    master_addr = None
+master_addr = MPI.COMM_WORLD.bcast(master_addr, root=0)
+os.environ["MASTER_ADDR"] = master_addr
+os.environ["MASTER_PORT"] = str(2345)
+os.environ['WORLD_SIZE'] = str(comm.size)
+os.environ['RANK'] = str(comm.rank)
+
+
 def main():
     mllog.config(filename=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'unet3d.log'))
     flags = PARSER.parse_args()

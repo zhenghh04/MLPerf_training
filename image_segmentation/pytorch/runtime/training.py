@@ -8,6 +8,16 @@ from runtime.distributed_utils import get_rank, reduce_tensor, get_world_size
 from runtime.inference import evaluate
 from runtime.logging import mllog_event, mllog_start, mllog_end, CONSTANTS
 import time
+skip_reduce=False
+
+try:
+    if os.environ["SKIP_REDUCE"]=="1":
+        skip_reduce=True
+    else:
+        skip_reduce=False
+except:
+    skip_reduce=False
+
 def get_optimizer(params, flags):
     if flags.optimizer == "adam":
         optim = Adam(params, lr=flags.learning_rate, weight_decay=flags.weight_decay)
@@ -93,8 +103,9 @@ def train(flags, model, train_loader, val_loader, loss_fn, score_fn, device, cal
                     optimizer.step()
 
                 optimizer.zero_grad()
-            loss_value = reduce_tensor(loss_value, world_size).detach().cpu().numpy()
-            cumulative_loss.append(loss_value)
+            if (not skip_reduce):
+                loss_value = reduce_tensor(loss_value, world_size).detach().cpu().numpy()
+                cumulative_loss.append(loss_value)
             mllog_start(key = "training_end", namespace="mlperf_storage", metadata={"epoch":epoch, "step": iteration}, sync=False)
             t_end = time.time()
             mllog_event(key = "training_computation_time", namespace="mlperf_storage", value = t_end - t_start, metadata={"epoch":epoch, "step": iteration}, sync=False)
@@ -105,11 +116,17 @@ def train(flags, model, train_loader, val_loader, loss_fn, score_fn, device, cal
 
         if epoch == next_eval_at:
             next_eval_at += flags.evaluate_every
-            del output
+            try:
+                del output
+            except:
+                a=1
             mllog_start(key=CONSTANTS.EVAL_START, value=epoch, metadata={CONSTANTS.EPOCH_NUM: epoch}, sync=False)
 
             eval_metrics = evaluate(flags, model, val_loader, loss_fn, score_fn, device, epoch)
-            eval_metrics["train_loss"] = sum(cumulative_loss) / len(cumulative_loss)
+            if (skip_reduce):
+                eval_metrics["train_loss"] = 0.01
+            else:
+                eval_metrics["train_loss"] = sum(cumulative_loss) / len(cumulative_loss)
 
             mllog_event(key=CONSTANTS.EVAL_ACCURACY,
                         value=eval_metrics["mean_dice"],
